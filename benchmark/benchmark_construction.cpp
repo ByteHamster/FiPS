@@ -10,10 +10,8 @@
 
 size_t numObjects = 1e6;
 size_t numQueries = 1e6;
-size_t leafSize = 20;
-size_t bucketSize = 2000;
+double fips_gamma = 2.0;
 
-template<typename HashFunc>
 void construct() {
     auto time = std::chrono::system_clock::now();
     long seed = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()).count();
@@ -32,7 +30,7 @@ void construct() {
     std::cout<<"Constructing"<<std::endl;
     sleep(1);
     auto beginConstruction = std::chrono::high_resolution_clock::now();
-    HashFunc hashFunc(keys);
+    fips::FiPS hashFunc(keys, fips_gamma);
     unsigned long constructionDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - beginConstruction).count();
 
@@ -73,8 +71,7 @@ void construct() {
 
     std::cout << "RESULT"
               << " method=FiPS"
-              << " l=" << leafSize
-              << " b=" << bucketSize
+              << " gamma=" << fips_gamma
               << " N=" << numObjects
               << " numQueries=" << numQueries
               << " queryTimeMilliseconds=" << queryDurationMs
@@ -87,14 +84,13 @@ int main(int argc, const char* const* argv) {
     tlx::CmdlineParser cmd;
     cmd.add_bytes('n', "numObjects", numObjects, "Number of objects to construct with");
     cmd.add_bytes('q', "numQueries", numQueries, "Number of queries to measure");
-    cmd.add_bytes('l', "leafSize", leafSize, "Leaf size to construct");
-    cmd.add_bytes('b', "bucketSize", bucketSize, "Bucket size to construct");
+    cmd.add_double('g', "gamma", fips_gamma, "Gamma parameter");
 
     if (!cmd.process(argc, argv)) {
         return 1;
     }
 
-    construct<fips::FiPS>();
+    construct();
 
     return 0;
 }

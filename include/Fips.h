@@ -34,6 +34,7 @@ class FiPS {
                 bitVector.reserve((levelBase + domain) / (512 - 64));
 
                 std::vector<uint64_t> collision;
+                collision.reserve(size_t(float(n) * gamma * exp(-gamma)));
                 if (level > 0) {
                     for (size_t i = 0; i < n; i++) {
                         remainingKeys[i] = util::remix(remainingKeys[i]);
@@ -61,7 +62,7 @@ class FiPS {
                 levelBase += domain;
                 flushCacheLineIfNeeded(currentCacheLine, currentCacheLineIdx, prefixSum, levelBase / (512 - 64));
                 levelBases.push_back(levelBase);
-                remainingKeys = collision;
+                remainingKeys = std::move(collision);
                 level++;
             }
         }
