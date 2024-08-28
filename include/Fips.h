@@ -3,6 +3,7 @@
 #include <vector>
 #include <ips2ra.hpp>
 #include <MurmurHash64.h>
+#include <fstream>
 
 namespace fips {
 class FiPS {
@@ -32,6 +33,30 @@ class FiPS {
         explicit FiPS(const std::vector<uint64_t> &keys, float gamma = 2.0f) {
             std::vector<uint64_t> modifiableKeys = keys;
             construct(modifiableKeys, gamma);
+        }
+
+        explicit FiPS(std::istream &is) {
+            uint64_t TAG;
+            is.read(reinterpret_cast<char *>(&TAG), sizeof(TAG));
+            assert(TAG == 0xf1b5);
+            size_t size;
+            is.read(reinterpret_cast<char *>(&size), sizeof(size));
+            levelBases.resize(size);
+            is.read(reinterpret_cast<char *>(levelBases.data()), size * sizeof(size_t));
+            is.read(reinterpret_cast<char *>(&size), sizeof(size));
+            bitVector.resize(size);
+            is.read(reinterpret_cast<char *>(bitVector.data()), size * sizeof(CacheLine));
+        }
+
+        void writeTo(std::ostream &os) {
+            uint64_t TAG = 0xf1b5;
+            os.write(reinterpret_cast<const char *>(&TAG), sizeof(TAG));
+            size_t size = levelBases.size();
+            os.write(reinterpret_cast<const char *>(&size), sizeof(size));
+            os.write(reinterpret_cast<const char *>(levelBases.data()), size * sizeof(size_t));
+            size = bitVector.size();
+            os.write(reinterpret_cast<const char *>(&size), sizeof(size));
+            os.write(reinterpret_cast<const char *>(bitVector.data()), size * sizeof(CacheLine));
         }
 
         void construct(std::vector<uint64_t> &remainingKeys, float gamma = 2.0f) {
