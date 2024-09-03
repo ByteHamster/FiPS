@@ -72,6 +72,8 @@ void construct() {
     std::cout << "RESULT"
               << " method=FiPS"
               << " gamma=" << fips_gamma
+              << " lineSize=" << fips::FiPS::CacheLine::LINE_SIZE
+              << " offsetSize=" << fips::FiPS::CacheLine::OFFSET_SIZE
               << " N=" << numObjects
               << " numQueries=" << numQueries
               << " queryTimeMilliseconds=" << queryDurationMs
