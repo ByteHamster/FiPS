@@ -9,17 +9,33 @@ namespace fips {
 class FiPS {
     private:
         struct CacheLine {
-            static constexpr size_t PAYLOAD_BITS = 512 - 32;
+            static constexpr size_t LINE_SIZE = 512;
+            using offset_t = uint32_t;
+            static constexpr size_t PAYLOAD_BITS = LINE_SIZE - 8 * sizeof(offset_t);
             union {
-                uint64_t bits[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+                uint64_t bits[LINE_SIZE / 64] = {0};
                 struct {
-                    uint32_t padding[15];
-                    uint32_t offset;
+                    offset_t padding[PAYLOAD_BITS / (8 * sizeof(offset_t))];
+                    offset_t offset;
                 };
             };
+
+            [[nodiscard]] inline bool isSet(size_t idx) const {
+                return (bits[idx / 64] & (1ull << (idx % 64))) != 0;
+            }
+
+            [[nodiscard]] inline size_t rank(size_t idx) const {
+                size_t popcount = 0;
+                for (size_t i = 0; i < idx / 64; i++) {
+                    popcount += std::popcount(bits[i]);
+                }
+                popcount += std::popcount(bits[idx / 64] & ((1ull << (idx % 64)) - 1));
+                return popcount;
+            }
         };
         std::vector<CacheLine> bitVector;
         std::vector<size_t> levelBases;
+        size_t levels = 0;
     public:
         explicit FiPS(const std::vector<std::string> &keys, float gamma = 2.0f) {
             std::vector<uint64_t> hashes;
@@ -46,6 +62,7 @@ class FiPS {
             is.read(reinterpret_cast<char *>(&size), sizeof(size));
             bitVector.resize(size);
             is.read(reinterpret_cast<char *>(bitVector.data()), size * sizeof(CacheLine));
+            levels = size - 1;
         }
 
         void writeTo(std::ostream &os) {
@@ -105,6 +122,7 @@ class FiPS {
                 remainingKeys = std::move(collision);
                 level++;
             }
+            levels = levelBases.size() - 1;
         }
 
         void flushCacheLineIfNeeded(CacheLine &currentCacheLine, size_t &currentCacheLineIdx, size_t &prefixSum, size_t targetIdx) {
@@ -126,18 +144,15 @@ class FiPS {
 
         [[nodiscard]] size_t operator()(uint64_t key) const {
             size_t level = 0;
-            while (level < levelBases.size() - 1) {
-                size_t fingerprint = util::fastrange64(key, levelBases[level + 1] - levelBases[level]) + levelBases[level];
-                size_t idx = fingerprint / CacheLine::PAYLOAD_BITS;
-                size_t idxInCacheLine = fingerprint % CacheLine::PAYLOAD_BITS;
+            while (level < levels) {
+                const size_t levelBase = levelBases[level];
+                const size_t levelSize = levelBases[level + 1] - levelBase;
+                const size_t fingerprint = util::fastrange64(key, levelSize) + levelBase;
+                const size_t idx = fingerprint / CacheLine::PAYLOAD_BITS;
+                const size_t idxInCacheLine = fingerprint % CacheLine::PAYLOAD_BITS;
                 const CacheLine &cacheLine = bitVector[idx];
-                if ((cacheLine.bits[idxInCacheLine / 64] & (1ull << (idxInCacheLine % 64))) != 0) {
-                    size_t popcount = 0;
-                    for (size_t i = 0; i < idxInCacheLine / 64; i++) {
-                        popcount += std::popcount(cacheLine.bits[i]);
-                    }
-                    popcount += std::popcount(cacheLine.bits[idxInCacheLine / 64] & ((1ull << (idxInCacheLine % 64)) - 1));
-                    return cacheLine.offset + popcount;
+                if (cacheLine.isSet(idxInCacheLine)) {
+                    return cacheLine.offset + cacheLine.rank(idxInCacheLine);
                 }
                 level++;
                 key = util::remix(key);
