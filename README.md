@@ -1,18 +1,19 @@
 # FiPS
 
-**Fi**nperprint **P**erfect Hashing through **S**orting.
-A very simple (125 lines of code) and fast implementation of perfect hashing through fingerprinting.
+A minimal perfect hash function (MPHF) maps a set S of n keys to the first n integers without collisions.
+FiPS (**Fi**nperprint **P**erfect Hashing through **S**orting) is a very simple
+and fast implementation of [perfect hashing through fingerprinting](https://doi.org/10.1007/978-3-319-07959-2_12).
 
-```
-@inproceedings{muller2014retrieval,
-  title={Retrieval and perfect hashing using fingerprinting},
-  author={M{\"u}ller, Ingo and Sanders, Peter and Schulze, Robert and Zhou, Wei},
-  booktitle={Experimental Algorithms: 13th International Symposium, SEA 2014, Copenhagen, Denmark, June 29--July 1, 2014. Proceedings 13},
-  pages={138--149},
-  year={2014},
-  organization={Springer}
-}
-```
+The idea of perfect hashing through fingerprinting is to hash each input key to a fingerprint.
+An array stores a bit for each possible fingerprint indicating whether keys collided.
+Colliding keys are handled in another layer of the same data structure.
+There are many implementations of the approach, for example [FMPH (Rust)](https://docs.rs/ph/latest/ph/).
+
+The construction of perfect hashing through fingerprinting is usually implemented as a linear scan,
+producing a fault for every key.
+Instead, FiPS is based on sorting the keys, which is more cache friendly and faster.
+Also, it interleaves its select data structure with the payload data, which enables very fast queries.
+Lastly, the FiPS implementation is very simple, with just about 200 lines of code.
 
 ### Library usage
 
@@ -23,11 +24,11 @@ add_subdirectory(path/to/FiPS)
 target_link_libraries(YourTarget PRIVATE FiPS)
 ```
 
-You can construct a PHF as follows.
+You can construct a FiPS perfect hash function as follows.
 
 ```cpp
 std::vector<std::string> keys = ...;
-fips::FiPS hashFunc(keys);
+fips::FiPS<> hashFunc(keys, /* gamma = */ 2.0f);
 std::cout<<hashFunc(keys.at(0))<<std::endl;
 ```
 
