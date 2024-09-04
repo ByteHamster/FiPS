@@ -12,6 +12,7 @@ size_t numObjects = 1e6;
 size_t numQueries = 1e6;
 double fips_gamma = 2.0;
 
+template <size_t lineSize, typename offsetType>
 void construct() {
     auto time = std::chrono::system_clock::now();
     long seed = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()).count();
@@ -30,7 +31,7 @@ void construct() {
     std::cout<<"Constructing"<<std::endl;
     sleep(1);
     auto beginConstruction = std::chrono::high_resolution_clock::now();
-    fips::FiPS hashFunc(keys, fips_gamma);
+    fips::FiPS<lineSize, offsetType> hashFunc(keys, fips_gamma);
     unsigned long constructionDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - beginConstruction).count();
 
@@ -72,8 +73,8 @@ void construct() {
     std::cout << "RESULT"
               << " method=FiPS"
               << " gamma=" << fips_gamma
-              << " lineSize=" << fips::FiPS::CacheLine::LINE_SIZE
-              << " offsetSize=" << fips::FiPS::CacheLine::OFFSET_SIZE
+              << " lineSize=" << fips::FiPS<lineSize, offsetType>::CacheLine::LINE_SIZE
+              << " offsetSize=" << fips::FiPS<lineSize, offsetType>::CacheLine::OFFSET_SIZE
               << " N=" << numObjects
               << " numQueries=" << numQueries
               << " queryTimeMilliseconds=" << queryDurationMs
@@ -82,17 +83,46 @@ void construct() {
               << std::endl;
 }
 
+template <typename offsetType>
+void dispatchLineSize(size_t lineSize) {
+    if (lineSize == 1024) {
+        construct<1024, offsetType>();
+    } else if (lineSize == 512) {
+        construct<512, offsetType>();
+    } else if (lineSize == 256) {
+        construct<256, offsetType>();
+    } else if (lineSize == 128) {
+        construct<128, offsetType>();
+    } else if (lineSize == 64) {
+        construct<64, offsetType>();
+
+    } else {
+        std::cerr<<"Invalid line size"<<std::endl;
+    }
+}
+
 int main(int argc, const char* const* argv) {
+    size_t lineSize = 256;
+    size_t offsetSize = 16;
+
     tlx::CmdlineParser cmd;
     cmd.add_bytes('n', "numObjects", numObjects, "Number of objects to construct with");
     cmd.add_bytes('q', "numQueries", numQueries, "Number of queries to measure");
+    cmd.add_bytes('l', "lineSize", lineSize, "Size of a cache line");
+    cmd.add_bytes('o', "offsetSize", offsetSize, "Number of bits for offset");
     cmd.add_double('g', "gamma", fips_gamma, "Gamma parameter");
 
     if (!cmd.process(argc, argv)) {
         return 1;
     }
 
-    construct();
+    if (offsetSize == 16) {
+        dispatchLineSize<uint16_t>(lineSize);
+    } else if (offsetSize == 32) {
+        dispatchLineSize<uint32_t>(lineSize);
+    } else {
+        std::cerr<<"Invalid offset size"<<std::endl;
+    }
 
     return 0;
 }

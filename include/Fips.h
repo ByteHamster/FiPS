@@ -6,11 +6,12 @@
 #include <fstream>
 
 namespace fips {
+template <size_t _lineSize = 256, typename _offsetType = uint16_t>
 class FiPS {
     public:
         struct CacheLine {
-            static constexpr size_t LINE_SIZE = 256;
-            using offset_t = uint16_t;
+            static constexpr size_t LINE_SIZE = _lineSize;
+            using offset_t = _offsetType;
             static constexpr size_t OFFSET_SIZE = 8 * sizeof(offset_t);
             static constexpr size_t PAYLOAD_BITS = LINE_SIZE - OFFSET_SIZE;
             static_assert(LINE_SIZE % 64 == 0);
@@ -37,7 +38,7 @@ class FiPS {
             }
         };
     private:
-        static constexpr size_t UPPER_RANK_SAMPLING = (size_t(std::numeric_limits<CacheLine::offset_t>::max()) + 1) / CacheLine::PAYLOAD_BITS;
+        static constexpr size_t UPPER_RANK_SAMPLING = (size_t(std::numeric_limits<typename CacheLine::offset_t>::max()) + 1) / CacheLine::PAYLOAD_BITS;
         std::vector<CacheLine> bitVector;
         std::vector<size_t> levelBases;
         std::vector<size_t> upperRank;
