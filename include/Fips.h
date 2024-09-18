@@ -159,7 +159,7 @@ class FiPS {
             return this->operator()(util::MurmurHash64(key));
         }
 
-        [[nodiscard]] __attribute_noinline__ size_t operator()(uint64_t key) const {
+        [[nodiscard]] size_t operator()(uint64_t key) const {
             size_t level = 0;
             do {
                 const size_t levelBase = levelBases[level];
