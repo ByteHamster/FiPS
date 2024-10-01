@@ -44,7 +44,7 @@ class FiPS {
         std::vector<size_t> upperRank;
         size_t levels = 0;
     public:
-        explicit FiPS(const std::span<std::string> &keys, float gamma = 2.0f) {
+        explicit FiPS(std::span<const std::string> keys, float gamma = 2.0f) {
             std::vector<uint64_t> hashes;
             hashes.reserve(keys.size());
             for (const std::string &key : keys) {
@@ -53,7 +53,7 @@ class FiPS {
             construct(hashes, gamma);
         }
 
-        explicit FiPS(const std::span<uint64_t> &keys, float gamma = 2.0f) {
+        explicit FiPS(std::span<const uint64_t> keys, float gamma = 2.0f) {
             std::vector<uint64_t> modifiableKeys(keys.begin(), keys.end());
             construct(modifiableKeys, gamma);
         }
