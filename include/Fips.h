@@ -4,6 +4,7 @@
 #include <ips2ra.hpp>
 #include <MurmurHash64.h>
 #include <fstream>
+#include <span>
 
 namespace fips {
 template <size_t _lineSize = 256, typename _offsetType = uint16_t>
