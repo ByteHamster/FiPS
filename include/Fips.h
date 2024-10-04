@@ -7,7 +7,7 @@
 #include <span>
 
 namespace fips {
-template <size_t _lineSize = 256, typename _offsetType = uint16_t>
+template <size_t _lineSize = 256, typename _offsetType = uint16_t, bool _useUpperRank = true>
 class FiPS {
     public:
         struct CacheLine {
@@ -90,7 +90,9 @@ class FiPS {
             CacheLine currentCacheLine = {};
             size_t prefixSum = 0;
             levelBases.push_back(0);
-            upperRank.push_back(0);
+            if constexpr (_useUpperRank) {
+                upperRank.push_back(0);
+            }
 
             size_t level = 0;
             while (!remainingKeys.empty()) {
@@ -139,9 +141,13 @@ class FiPS {
                 bitVector.push_back(currentCacheLine);
                 currentCacheLineIdx++;
                 if (currentCacheLineIdx % UPPER_RANK_SAMPLING == 0) {
-                    assert(upperRank.size() == currentCacheLineIdx / UPPER_RANK_SAMPLING);
-                    upperRank.push_back(upperRank.back() + prefixSum);
-                    prefixSum = 0;
+                    if constexpr (_useUpperRank) {
+                        assert(upperRank.size() == currentCacheLineIdx / UPPER_RANK_SAMPLING);
+                        upperRank.push_back(upperRank.back() + prefixSum);
+                        prefixSum = 0;
+                    } else {
+                        throw std::runtime_error("Too many keys, enable useUpperRank or increase offset type");
+                    }
                 }
                 currentCacheLine = {};
                 assert(prefixSum < std::numeric_limits<typename CacheLine::offset_t>::max());
@@ -170,7 +176,11 @@ class FiPS {
                 const size_t idxInCacheLine = fingerprint % CacheLine::PAYLOAD_BITS;
                 const CacheLine &cacheLine = bitVector[idx];
                 if (cacheLine.isSet(idxInCacheLine)) {
-                    return cacheLine.offset + upperRank[idx / UPPER_RANK_SAMPLING] + cacheLine.rank(idxInCacheLine);
+                    size_t result = cacheLine.offset + cacheLine.rank(idxInCacheLine);
+                    if constexpr (_useUpperRank) {
+                        result += upperRank[idx / UPPER_RANK_SAMPLING];
+                    }
+                    return result;
                 }
                 level++;
                 key = util::remix(key);
