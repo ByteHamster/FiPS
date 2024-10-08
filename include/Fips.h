@@ -29,13 +29,43 @@ class FiPS {
                 return (bits[idx / 64] & (1ull << (idx % 64))) != 0;
             }
 
-            [[nodiscard]] inline size_t rank(size_t idx) const {
+            [[nodiscard]] inline size_t rankInWord(uint64_t word, size_t index) const {
+                return std::popcount(word & ((1ull << index) - 1));
+            }
+
+            /**
+             * Rank query looping over array. Needs random conditional jumps in each iteration.
+             */
+            [[nodiscard]] inline size_t rankLoop(size_t idx) const {
                 size_t popcount = 0;
                 for (size_t i = 0; i < idx / 64; i++) {
                     popcount += std::popcount(bits[i]);
                 }
-                popcount += std::popcount(bits[idx / 64] & ((1ull << (idx % 64)) - 1));
+                popcount += rankInWord(bits[idx / 64], idx % 64);
                 return popcount;
+            }
+
+            /**
+             * Calculates whole prefix sum even if not necessary and then uses an array index to avoid branches.
+             * From Pibiri, Kanda: "Rank/select queries over mutable bitmaps"
+             */
+            [[nodiscard]] inline size_t rank(size_t idx) const {
+                size_t prefix[LINE_SIZE / 64];
+                prefix[0] = 0;
+                if constexpr (LINE_SIZE > 64) {
+                    prefix[1] = std::popcount(bits[0]);
+                }
+                if constexpr (LINE_SIZE > 128) {
+                    prefix[2] = prefix[1] + std::popcount(bits[1]);
+                    prefix[3] = prefix[2] + std::popcount(bits[2]);
+                }
+                if constexpr (LINE_SIZE > 256) {
+                    prefix[4] = prefix[3] + std::popcount(bits[3]);
+                    prefix[5] = prefix[4] + std::popcount(bits[4]);
+                    prefix[6] = prefix[5] + std::popcount(bits[5]);
+                    prefix[7] = prefix[6] + std::popcount(bits[6]);
+                }
+                return prefix[idx / 64] + rankInWord(bits[idx / 64], idx % 64);
             }
         };
     private:
