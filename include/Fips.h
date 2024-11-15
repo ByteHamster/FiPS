@@ -1,29 +1,29 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include <ips2ra.hpp>
-#include <MurmurHash64.h>
 #include <fstream>
 #include <span>
+
+#include <ips2ra.hpp>
+#include <bytehamster/util/MurmurHash64.h>
 
 namespace fips {
 template <size_t _lineSize = 256, typename _offsetType = uint16_t, bool _useUpperRank = true>
 class FiPS {
     public:
-        struct CacheLine {
+        union CacheLine {
             static constexpr size_t LINE_SIZE = _lineSize;
             using offset_t = _offsetType;
             static constexpr size_t OFFSET_SIZE = 8 * sizeof(offset_t);
             static constexpr size_t PAYLOAD_BITS = LINE_SIZE - OFFSET_SIZE;
             static_assert(LINE_SIZE % 64 == 0);
             static_assert(LINE_SIZE > 8 * sizeof(offset_t));
-            union {
-                uint64_t bits[LINE_SIZE / 64] = {0};
-                struct {
-                    offset_t padding[PAYLOAD_BITS / (8 * sizeof(offset_t))];
-                    offset_t offset;
-                };
-            };
+
+            uint64_t bits[LINE_SIZE / 64] = {0};
+            struct {
+                [[maybe_unused]] offset_t padding[PAYLOAD_BITS / (8 * sizeof(offset_t))];
+                offset_t offset;
+            } parts;
 
             [[nodiscard]] inline bool isSet(size_t idx) const {
                 return (bits[idx / 64] & (1ull << (idx % 64))) != 0;
@@ -79,7 +79,7 @@ class FiPS {
             std::vector<uint64_t> hashes;
             hashes.reserve(keys.size());
             for (const std::string &key : keys) {
-                hashes.push_back(util::MurmurHash64(key));
+                hashes.push_back(bytehamster::util::MurmurHash64(key));
             }
             construct(hashes, gamma);
         }
@@ -135,21 +135,21 @@ class FiPS {
                 collision.reserve(size_t(float(n) * gamma * exp(-gamma)));
                 if (level > 0) {
                     for (size_t i = 0; i < n; i++) {
-                        remainingKeys[i] = util::remix(remainingKeys[i]);
+                        remainingKeys[i] = bytehamster::util::remix(remainingKeys[i]);
                     }
                 }
                 ips2ra::sort(remainingKeys.begin(), remainingKeys.end());
 
                 for (size_t i = 0; i < n; i++) {
-                    size_t fingerprint = util::fastrange64(remainingKeys[i], domain) + levelBase;
+                    size_t fingerprint = bytehamster::util::fastrange64(remainingKeys[i], domain) + levelBase;
                     size_t idx = fingerprint / CacheLine::PAYLOAD_BITS;
                     flushCacheLineIfNeeded(currentCacheLine, currentCacheLineIdx, prefixSum, idx);
 
-                    if (i + 1 < n && fingerprint == util::fastrange64(remainingKeys[i + 1], domain) + levelBase) {
+                    if (i + 1 < n && fingerprint == bytehamster::util::fastrange64(remainingKeys[i + 1], domain) + levelBase) {
                         do {
                             collision.push_back(remainingKeys[i]);
                             i++;
-                        } while (i < n && fingerprint == util::fastrange64(remainingKeys[i], domain) + levelBase);
+                        } while (i < n && fingerprint == bytehamster::util::fastrange64(remainingKeys[i], domain) + levelBase);
                         i--;
                     } else {
                         size_t idxInCacheLine = fingerprint % CacheLine::PAYLOAD_BITS;
@@ -181,7 +181,7 @@ class FiPS {
                 }
                 currentCacheLine = {};
                 assert(prefixSum < std::numeric_limits<typename CacheLine::offset_t>::max());
-                currentCacheLine.offset = prefixSum;
+                currentCacheLine.parts.offset = prefixSum;
             }
         }
 
@@ -193,7 +193,7 @@ class FiPS {
         }
 
         [[nodiscard]] size_t operator()(const std::string &key) const {
-            return this->operator()(util::MurmurHash64(key));
+            return this->operator()(bytehamster::util::MurmurHash64(key));
         }
 
         [[nodiscard]] size_t operator()(uint64_t key) const {
@@ -201,19 +201,19 @@ class FiPS {
             do {
                 const size_t levelBase = levelBases[level];
                 const size_t levelSize = levelBases[level + 1] - levelBase;
-                const size_t fingerprint = util::fastrange64(key, levelSize) + levelBase;
+                const size_t fingerprint = bytehamster::util::fastrange64(key, levelSize) + levelBase;
                 const size_t idx = fingerprint / CacheLine::PAYLOAD_BITS;
                 const size_t idxInCacheLine = fingerprint % CacheLine::PAYLOAD_BITS;
                 const CacheLine &cacheLine = bitVector[idx];
                 if (cacheLine.isSet(idxInCacheLine)) {
-                    size_t result = cacheLine.offset + cacheLine.rank(idxInCacheLine);
+                    size_t result = cacheLine.parts.offset + cacheLine.rank(idxInCacheLine);
                     if constexpr (_useUpperRank) {
                         result += upperRank[idx / UPPER_RANK_SAMPLING];
                     }
                     return result;
                 }
                 level++;
-                key = util::remix(key);
+                key = bytehamster::util::remix(key);
             } while (level < levels);
             return -1;
         }

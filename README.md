@@ -26,7 +26,7 @@ Clone this repository (with submodules) and add the following to your `CMakeList
 
 ```
 add_subdirectory(path/to/FiPS)
-target_link_libraries(YourTarget PRIVATE FiPS)
+target_link_libraries(YourTarget PRIVATE FiPS::fips)
 ```
 
 You can construct a FiPS perfect hash function as follows.
