@@ -21,7 +21,14 @@ class FiPS {
 
             uint64_t bits[LINE_SIZE / 64] = {0};
             struct {
-                [[maybe_unused]] offset_t padding[PAYLOAD_BITS / (8 * sizeof(offset_t))];
+                #ifdef __GNUC__
+                  #pragma GCC diagnostic push
+                  #pragma GCC diagnostic ignored "-Wattributes"
+                #endif
+                  [[maybe_unused]] offset_t padding[PAYLOAD_BITS / (8 * sizeof(offset_t))];
+                #ifdef __GNUC__
+                  #pragma GCC diagnostic pop
+                #endif
                 offset_t offset;
             } parts;
 
