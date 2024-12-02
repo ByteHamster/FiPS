@@ -18,7 +18,7 @@ jobs:
           - { name: clang, version: 16}
           - { name: clang, version: 17}
           - { name: clang, version: 18}
-    name: Build (${{ matrix.compiler.compiler }} ${{ matrix.compiler.version }})
+    name: Build (${{ matrix.compiler.name }} ${{ matrix.compiler.version }})
     runs-on: ubuntu-24.04
     steps:
       - name: Install dependencies
@@ -29,14 +29,14 @@ jobs:
         if: ${{ matrix.compiler.name == 'gcc' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends gcc-${{ matrix.compiler.version }} g++-${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/cc gcc /usr/bin/gcc-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/c++ g++ /usr/bin/g++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
+          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
       - name: Install Clang
         if: ${{ matrix.compiler.name == 'clang' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends clang-${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/cc clang /usr/bin/clang-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/c++ clang++ /usr/bin/clang++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
+          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
       - uses: actions/checkout@v4
         with:
           submodules: recursive
