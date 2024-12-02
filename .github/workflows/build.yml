@@ -26,13 +26,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install --assume-yes --no-install-recommends ca-certificates cmake git libtbb-dev
       - name: Install GCC
-        if: ${{ matrix.compiler.name == "gcc" }}
+        if: ${{ matrix.compiler.name == 'gcc' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends gcc-${{ matrix.compiler.version }} g++-${{ matrix.compiler.version }}
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
       - name: Install Clang
-        if: ${{ matrix.compiler.name == "clang" }}
+        if: ${{ matrix.compiler.name == 'clang' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends clang-${{ matrix.compiler.version }}
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
