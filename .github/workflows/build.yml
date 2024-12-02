@@ -29,20 +29,18 @@ jobs:
         if: ${{ matrix.compiler.name == 'gcc' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends gcc-${{ matrix.compiler.version }} g++-${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          export CC=/usr/bin/gcc-${{ matrix.compiler.version }} CXX=/usr/bin/g++-${{ matrix.compiler.version }}
+          echo "CC=/usr/bin/gcc-${{ matrix.compiler.version }}" >> $GITHUB_ENV
+          echo "CXX=/usr/bin/g++-${{ matrix.compiler.version }}" >> $GITHUB_ENV
       - name: Install Clang
         if: ${{ matrix.compiler.name == 'clang' }}
         run: |
           sudo apt-get install --assume-yes --no-install-recommends clang-${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{ matrix.compiler.version }} ${{ matrix.compiler.version }}
-          export CC=/usr/bin/clang-${{ matrix.compiler.version }} CXX=/usr/bin/clang++-${{ matrix.compiler.version }}
+          echo "CC=/usr/bin/clang-${{ matrix.compiler.version }}" >> $GITHUB_ENV
+          echo "CXX=/usr/bin/clang++-${{ matrix.compiler.version }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Build
         run: |
-          cmake -B ./build -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_C_COMPILER=$CC
+          cmake -B ./build
           cmake --build ./build --parallel
