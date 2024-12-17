@@ -203,7 +203,7 @@ class FiPS {
             }
             return (_useUpperRank ? upperRank.back() : 0)
                     + bitVector.back().parts.offset
-                    + bitVector.back().rank(CacheLine::PAYLOAD_BITS - 1);
+                    + bitVector.back().rank(CacheLine::PAYLOAD_BITS);
         }
 
         [[nodiscard]] size_t getBits() const {
