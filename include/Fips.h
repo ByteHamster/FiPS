@@ -82,6 +82,9 @@ class FiPS {
         std::vector<size_t> upperRank;
         size_t levels = 0;
     public:
+        explicit FiPS() {
+        }
+
         explicit FiPS(std::span<const std::string> keys, float gamma = 2.0f) {
             std::vector<uint64_t> hashes;
             hashes.reserve(keys.size());
@@ -89,11 +92,13 @@ class FiPS {
                 hashes.push_back(bytehamster::util::MurmurHash64(key));
             }
             construct(hashes, gamma);
+            assert(getN() == keys.size());
         }
 
         explicit FiPS(std::span<const uint64_t> keys, float gamma = 2.0f) {
             std::vector<uint64_t> modifiableKeys(keys.begin(), keys.end());
             construct(modifiableKeys, gamma);
+            assert(getN() == keys.size());
         }
 
         explicit FiPS(std::istream &is) {
@@ -190,6 +195,15 @@ class FiPS {
                 assert(prefixSum < std::numeric_limits<typename CacheLine::offset_t>::max());
                 currentCacheLine.parts.offset = prefixSum;
             }
+        }
+
+        [[nodiscard]] size_t getN() const {
+            if (levels == 0) {
+                return 0;
+            }
+            return (_useUpperRank ? upperRank.back() : 0)
+                    + bitVector.back().parts.offset
+                    + bitVector.back().rank(CacheLine::PAYLOAD_BITS - 1);
         }
 
         [[nodiscard]] size_t getBits() const {
